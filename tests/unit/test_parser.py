@@ -1,6 +1,6 @@
 import pytest  # noqa: F401
 import re
-from parser import fetch_forecast, normalize_forecast
+from src.parsers.open_meteo import fetch_forecast, normalize_forecast
 
 RAW_RESPONSE = {
     "daily": {
