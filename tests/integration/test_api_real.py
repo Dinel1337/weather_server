@@ -1,5 +1,6 @@
 import httpx
-from src.parsers.open_meteo import normalize_forecast
+import pytest
+from src.parsers.open_meteo import normalize_forecast, fetch_forecast
 
 URL = "https://api.open-meteo.com/v1/forecast"
 PARAMS = {
@@ -31,3 +32,9 @@ def test_normalize_from_real_api():
     assert len(result) == 10
     for day in result:
         assert all(k in day for k in ("date", "temp_max", "temp_min", "wind", "prec", "weather"))
+
+
+async def test_full_async_flow():
+    forecast = await fetch_forecast(55.75, 37.62, days=2)
+    assert forecast.latitude == 55.75
+    assert len(forecast.days) == 2

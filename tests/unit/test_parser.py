@@ -13,13 +13,16 @@ RAW_RESPONSE = {
     }
 }
 
-def test_fetch_forecast(httpx_mock):
+
+async def test_fetch_forecast(httpx_mock):
     httpx_mock.add_response(
         url=re.compile(r"https://api\.open-meteo\.com/v1/forecast.*"),
         json=RAW_RESPONSE
     )
-    data = fetch_forecast(55.75, 37.62, days=2)
-    assert "daily" in data
+    # fetch_forecast теперь async, нужно await
+    data = await fetch_forecast(55.75, 37.62, days=2)
+    assert len(data.days) == 2
+    assert data.days[0].temp_max == 5.2
 
 def test_normalize_forecast():
     result = normalize_forecast(RAW_RESPONSE)
