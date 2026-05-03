@@ -19,7 +19,6 @@ async def test_fetch_forecast(httpx_mock):
         url=re.compile(r"https://api\.open-meteo\.com/v1/forecast.*"),
         json=RAW_RESPONSE
     )
-    # fetch_forecast теперь async, нужно await
     data = await fetch_forecast(55.75, 37.62, days=2)
     assert len(data.days) == 2
     assert data.days[0].temp_max == 5.2

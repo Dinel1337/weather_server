@@ -1,6 +1,6 @@
 import httpx
 from src.domain.models import ForecastResponse, DayForecast
-from src.domain.weather_code import WMO_CODES
+from src.domain.weather_code import WeatherCode
 
 async def fetch_forecast(lat: float, lon: float, days: int = 10) -> ForecastResponse:
     url = "https://api.open-meteo.com/v1/forecast"
@@ -17,15 +17,26 @@ async def fetch_forecast(lat: float, lon: float, days: int = 10) -> ForecastResp
     data = resp.json()
     daily = data["daily"]
     days_list = []
-    for i, date in enumerate(daily["time"]):
-        code = daily["weathercode"][i]
+    for date, tmax, tmin, wind, prec, wcode in zip(
+        daily["time"],
+        daily["temperature_2m_max"],
+        daily["temperature_2m_min"],
+        daily["wind_speed_10m_max"],
+        daily["precipitation_sum"],
+        daily["weathercode"]
+    ):
+        try:
+            code = WeatherCode(wcode)
+            weather_str = code.description
+        except ValueError:
+            weather_str = "неизвестно"
         days_list.append(DayForecast(
             date=date,
-            temp_max=daily["temperature_2m_max"][i],
-            temp_min=daily["temperature_2m_min"][i],
-            wind=daily["wind_speed_10m_max"][i],
-            prec=daily["precipitation_sum"][i],
-            weather=WMO_CODES.get(code, "неизвестно")
+            temp_max=tmax,
+            temp_min=tmin,
+            wind=wind,
+            prec=prec,
+            weather=weather_str
         ))
     return ForecastResponse(latitude=lat, longitude=lon, days=days_list)
 
@@ -33,14 +44,25 @@ def normalize_forecast(data: dict) -> list[dict]:
     """Deprecated: для тестов, возвращает старый формат списка словарей."""
     daily = data["daily"]
     result = []
-    for i, date in enumerate(daily["time"]):
-        code = daily["weathercode"][i]
+    for date, tmax, tmin, wind, prec, wcode in zip(
+        daily["time"],
+        daily["temperature_2m_max"],
+        daily["temperature_2m_min"],
+        daily["wind_speed_10m_max"],
+        daily["precipitation_sum"],
+        daily["weathercode"]
+    ):
+        try:
+            code = WeatherCode(wcode)
+            weather_str = code.description
+        except ValueError:
+            weather_str = "неизвестно"
         result.append({
             "date": date,
-            "temp_max": daily["temperature_2m_max"][i],
-            "temp_min": daily["temperature_2m_min"][i],
-            "wind": daily["wind_speed_10m_max"][i],
-            "prec": daily["precipitation_sum"][i],
-            "weather": WMO_CODES.get(code, "неизвестно")
+            "temp_max": tmax,
+            "temp_min": tmin,
+            "wind": wind,
+            "prec": prec,
+            "weather": weather_str
         })
     return result
