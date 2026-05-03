@@ -1,4 +1,5 @@
-import pytest
+import pytest  # noqa: F401
+import re
 from parser import fetch_forecast, normalize_forecast
 
 RAW_RESPONSE = {
@@ -13,7 +14,11 @@ RAW_RESPONSE = {
 }
 
 def test_fetch_forecast(httpx_mock):
-    httpx_mock.add_response(url="https://api.open-meteo.com/v1/forecast", json=RAW_RESPONSE)
+    # Мокаем по регулярке — любой URL с этим хостом
+    httpx_mock.add_response(
+        url=re.compile(r"https://api\.open-meteo\.com/v1/forecast.*"),
+        json=RAW_RESPONSE
+    )
     data = fetch_forecast(55.75, 37.62, days=2)
     assert "daily" in data
 

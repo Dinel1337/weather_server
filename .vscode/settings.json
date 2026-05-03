@@ -1,0 +1,13 @@
+{
+    "files.exclude": {
+        "**/.*": true,
+        "**/__pycache__": true,
+        "bin": true,
+        "tox.ini": true,
+        "poetry.lock": true,
+        "pyproject.toml": true,
+        "uv.lock": true,
+        "Dockerfile": true,
+        "README.md": true
+    }
+}
