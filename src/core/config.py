@@ -1,11 +1,14 @@
-import os
-from dotenv import load_dotenv
+from pydantic_settings import BaseSettings
 
-load_dotenv()
+class Settings(BaseSettings):
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    
+    yandex_weather_key: str = ""
+    weather_provider: str = "open_meteo"
+    cache_ttl: int = 3600
 
-class Settings:
-    yandex_key: str = os.getenv("YANDEX_WEATHER_KEY", "")
-    default_provider: str = os.getenv("WEATHER_PROVIDER", "open_meteo")  # open_meteo или yandex
-    cache_ttl: int = int(os.getenv("CACHE_TTL", "3600"))
+    @property
+    def yandex_key(self) -> str:
+        return self.yandex_weather_key
 
 settings = Settings()
