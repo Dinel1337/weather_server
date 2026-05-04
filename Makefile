@@ -20,3 +20,21 @@ commit:
 
 copy:
 	bash bin/!copyTreeProject.bash
+
+view-full:
+	bash bin/!toggle_bash_view.bash <<< "y"
+
+view-clean:
+	bash bin/!toggle_bash_view.bash <<< "n"
+
+view-full:
+	@echo "y" | bash bin/!toggle_bash_view.bash
+
+view-clean:
+	@echo "n" | bash bin/!toggle_bash_view.bash
+
+view-full:
+	@echo "y" | bash bin/!toggle_bash_view.bash
+
+view-clean:
+	@echo "n" | bash bin/!toggle_bash_view.bash
