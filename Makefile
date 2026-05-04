@@ -1,4 +1,4 @@
-.PHONY: test lint tox
+.PHONY: test lint tox commit copy
 
 test:
 	uv run pytest tests/ -v
@@ -11,3 +11,12 @@ tox:
 
 ci: lint test
 	echo "✅ CI пройден"
+
+commit:
+	@read -p "Введите сообщение коммита: " msg; \
+	git add -A; \
+	git commit -m "$$msg | added via Makefile"; \
+	git push
+
+copy:
+	bash bin/!copyTreeProject.bash
