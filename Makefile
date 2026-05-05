@@ -13,6 +13,9 @@ cov:
 	uv run pytest tests/ --cov=src --cov-report=html --cov-report=term-missing
 	echo "Отчёт: htmlcov/index.html"
 
+copy:
+	bash bin/\!copyTreeProject.bash
+
 ci: lint test
 	echo "✅ CI пройден"
 
