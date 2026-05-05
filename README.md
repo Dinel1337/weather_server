@@ -16,7 +16,7 @@
 ## Быстрая установка (одной командой)
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/Dinel1337/weather_server/main/bin/setup.sh | bash
+curl -sSL https://raw.githubusercontent.com/Dinel1337/weather_server/master/bin/setup.sh | bash
 ```
 ## Установка
 
