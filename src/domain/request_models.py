@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field, field_validator
 
 class StripStringsModel(BaseModel):
-    """Базовая модель: обрезает пробелы в начале и конце всех строк."""
+    """Базовая модель: обрезает пробелы у всех строковых полей."""
     @field_validator('*', mode='before')
     @classmethod
     def strip_all_strings(cls, v):
@@ -11,19 +11,16 @@ class StripStringsModel(BaseModel):
 
 class ForecastRequest(StripStringsModel):
     lat: float = Field(
-        default=55.75,
-        ge=-90, le=90,
+        default=55.75, ge=-90, le=90,
         description="Широта, от -90 до 90"
     )
     lon: float = Field(
-        default=37.62,
-        ge=-180, le=180,
+        default=37.62, ge=-180, le=180,
         description="Долгота, от -180 до 180"
     )
     days: int = Field(
-        default=10,
-        ge=1, le=16,
-        description="Количество дней прогноза (макс. 16)"
+        default=10, ge=1, le=16,
+        description="Количество дней прогноза (макс. 16, для Яндекс ≤7)"
     )
     provider: str = Field(
         default="open_meteo",
@@ -31,36 +28,33 @@ class ForecastRequest(StripStringsModel):
     )
     mode: str = Field(
         default="daily",
-        description="Режим отображения: daily или day_parts"
+        description=(
+            "Режим отображения. daily – только суточные min/max, morning/evening будут null. "
+            "day_parts – добавляет погоду на 8:00 (утро) и 18:00 (вечер) в поля morning/evening."
+        )
     )
-
     @field_validator('provider')
     @classmethod
     def validate_provider(cls, v):
         allowed = {"open_meteo", "yandex"}
-        v_lower = v.lower()
-        if v_lower not in allowed:
+        v = v.lower()
+        if v not in allowed:
             raise ValueError(f"Провайдер должен быть одним из: {allowed}")
-        return v_lower
-
+        return v
     @field_validator('mode')
     @classmethod
     def validate_mode(cls, v):
         allowed = {"daily", "day_parts"}
-        v_lower = v.lower()
-        if v_lower not in allowed:
+        v = v.lower()
+        if v not in allowed:
             raise ValueError(f"Режим должен быть одним из: {allowed}")
-        return v_lower
-
-    # Дополнительно: проверка, что days не больше 7 для Яндекс (можно оставить так, 
-    # но если передан yandex, то заругаемся на уровне сервиса)
+        return v
 
 class OpenMeteoRequest(StripStringsModel):
     lat: float = Field(default=55.75, ge=-90, le=90, description="Широта")
     lon: float = Field(default=37.62, ge=-180, le=180, description="Долгота")
-    days: int = Field(default=10, ge=1, le=16, description="Дней")
-    mode: str = Field(default="daily", description="daily или day_parts")
-
+    days: int = Field(default=10, ge=1, le=16, description="Количество дней")
+    mode: str = Field(default="daily", description="daily (без утра/вечера) или day_parts (с утром/вечером)")
     @field_validator('mode')
     @classmethod
     def validate_mode(cls, v):
@@ -73,8 +67,7 @@ class YandexRequest(StripStringsModel):
     lat: float = Field(default=55.75, ge=-90, le=90, description="Широта")
     lon: float = Field(default=37.62, ge=-180, le=180, description="Долгота")
     days: int = Field(default=7, ge=1, le=7, description="Дней (макс. 7 для Яндекса)")
-    mode: str = Field(default="daily", description="daily или day_parts")
-
+    mode: str = Field(default="daily", description="daily (без утра/вечера) или day_parts (с утром/вечером)")
     @field_validator('mode')
     @classmethod
     def validate_mode(cls, v):
