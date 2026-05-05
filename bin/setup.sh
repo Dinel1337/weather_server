@@ -1,6 +1,6 @@
 #!/bin/bash
-# setup.sh — автоустановка Weather Server
-# Запуск: curl -sSL https://raw.githubusercontent.com/Dinel1337/weather_server/main/bin/setup.sh | bash
+# setup.sh — автоустановка Weather Server (клон → установка → запуск)
+# Запуск: curl -sSL https://raw.githubusercontent.com/Dinel1337/weather_server/master/bin/setup.sh | bash
 
 set -e
 
@@ -11,7 +11,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 echo -e "${BLUE}╔══════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║            Weather Server — установка окружения           ║${NC}"
+echo -e "${BLUE}║        Weather Server — установка и автозапуск           ║${NC}"
 echo -e "${BLUE}╚══════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
@@ -41,7 +41,7 @@ if ! command -v git &> /dev/null; then
 fi
 echo -e "${GREEN}✓ Git установлен${NC}"
 
-# 4. Клонирование
+# 4. Клонирование (если ещё не в папке проекта)
 if [ ! -f "pyproject.toml" ]; then
     echo -e "${YELLOW}→ Клонирование репозитория...${NC}"
     git clone https://github.com/Dinel1337/weather_server.git
@@ -68,21 +68,16 @@ echo -e "${YELLOW}→ Установка зависимостей...${NC}"
 uv sync
 echo -e "${GREEN}✓ Зависимости установлены${NC}"
 
-# Финал
+# 7. Автозапуск сервера
 echo ""
 echo -e "${GREEN}╔══════════════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║                ✅ Установка завершена!                    ║${NC}"
+echo -e "${GREEN}║              ✅ Всё готово! Запускаем сервер...           ║${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════════════════════════╝${NC}"
 echo ""
-echo -e "${BLUE}🚀 Запуск сервера:${NC}"
-echo -e "   ${GREEN}uv run uvicorn src.main:app --reload${NC}"
+echo -e "${BLUE}🌐 Веб-интерфейс откроется по адресу:${NC} ${GREEN}http://localhost:8000${NC}"
+echo -e "${BLUE}📚 Документация API:${NC} ${GREEN}http://localhost:8000/docs${NC}"
+echo -e "${BLUE}🛑 Чтобы остановить сервер, нажмите Ctrl+C${NC}"
 echo ""
-echo -e "${BLUE}🌐 Веб-интерфейс:${NC}"
-echo -e "   ${GREEN}http://localhost:8000${NC}"
-echo ""
-echo -e "${BLUE}📚 Swagger:${NC}"
-echo -e "   ${GREEN}http://localhost:8000/docs${NC}"
-echo ""
-echo -e "${BLUE}🛑 Остановка:${NC}"
-echo -e "   ${GREEN}Ctrl+C${NC}"
-echo ""
+
+# Запускаем сервер в текущей папке (интерактивно, вывод в терминал)
+uv run uvicorn src.main:app --reload
