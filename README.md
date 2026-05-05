@@ -12,6 +12,12 @@
 - pytest + pytest-httpx
 - uv (управление зависимостями)
 - Uvicorn (ASGI сервер)
+
+## Быстрая установка (одной командой)
+
+```bash
+curl -sSL https://raw.githubusercontent.com/Dinel1337/weather_server/main/bin/setup.sh | bash
+```
 ## Установка
 
 ```bash
