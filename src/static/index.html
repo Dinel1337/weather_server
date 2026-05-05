@@ -1,128 +1,406 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Weather Server — Прогноз</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #e2e8f0; }
-    .card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(148, 163, 184, 0.1); }
-    .day-card { transition: transform 0.2s ease, background 0.2s; }
-    .day-card:hover { transform: translateY(-2px); background: rgba(51, 65, 85, 0.5); }
-    input[type="number"]::-webkit-inner-spin-button { display: none; }
-    .control-btn { transition: all 0.2s; }
-    .control-btn.active { background: #2563eb; color: white; }
-    .part-block { background: rgba(51, 65, 85, 0.4); border-radius: 12px; }
-  </style>
-</head>
-<body class="min-h-screen flex flex-col items-center justify-center p-4">
-  <div class="w-full max-w-2xl mx-auto">
-    <h1 class="text-3xl font-bold text-center mb-2">🌤 Weather Server</h1>
-    <p class="text-center text-slate-400 mb-8">Прогноз на 10 дней по координатам</p>
-
-    <div class="card rounded-2xl p-6 mb-8 shadow-xl">
-      <div class="flex flex-col sm:flex-row gap-3">
-        <div class="flex-1">
-          <label class="block text-sm font-medium text-slate-300 mb-1">Широта (lat)</label>
-          <input id="lat" type="number" step="any" value="55.75"
-                 class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="flex-1">
-          <label class="block text-sm font-medium text-slate-300 mb-1">Долгота (lon)</label>
-          <input id="lon" type="number" step="any" value="37.62"
-                 class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-      </div>
-      <div class="mt-3 flex items-center gap-2 flex-wrap">
-        <span class="text-sm text-slate-400 mr-2">Провайдер:</span>
-        <button id="btn-open-meteo" onclick="setProvider('open_meteo')" class="control-btn px-3 py-1 rounded-full text-sm font-medium bg-slate-700 hover:bg-slate-600">
-          Open-Meteo
-        </button>
-        <button id="btn-yandex" onclick="setProvider('yandex')" class="control-btn px-3 py-1 rounded-full text-sm font-medium bg-slate-700 hover:bg-slate-600">
-          Яндекс
-        </button>
-        <span class="text-sm text-slate-400 ml-3">Режим:</span>
-        <button id="btn-daily" onclick="setMode('daily')" class="control-btn px-3 py-1 rounded-full text-sm font-medium bg-slate-700 hover:bg-slate-600">
-          Суточные
-        </button>
-        <button id="btn-parts" onclick="setMode('day_parts')" class="control-btn px-3 py-1 rounded-full text-sm font-medium bg-slate-700 hover:bg-slate-600">
-          8 утра / 6 вечера
-        </button>
-        <button onclick="fetchForecast()" class="ml-auto bg-blue-600 hover:bg-blue-700 transition px-6 py-2 rounded-lg font-medium">
-          🔍 Показать
-        </button>
-      </div>
-    </div>
-
-    <div id="forecast-container" class="space-y-3">
-      <p class="text-center text-slate-500">Введите координаты и нажмите «Показать»</p>
-    </div>
-  </div>
-
-  <script>
-    let currentProvider = 'open_meteo';
-    let currentMode = 'daily';
-
-    // Инициализация активных кнопок при загрузке
-    document.addEventListener('DOMContentLoaded', function() {
-      setProvider('open_meteo');
-      setMode('daily');
-    });
-
-    function setProvider(provider) {
-      currentProvider = provider;
-      // Снимаем активный класс со всех кнопок провайдера
-      ['btn-open-meteo', 'btn-yandex'].forEach(id => {
-        document.getElementById(id).classList.remove('active');
-      });
-      // Устанавливаем активный класс на выбранную кнопку
-      document.getElementById(provider === 'open_meteo' ? 'btn-open-meteo' : 'btn-yandex').classList.add('active');
-      // Автоматически загружаем прогноз при смене провайдера
-      fetchForecast();
-    }
-
-    function setMode(mode) {
-      currentMode = mode;
-      // Снимаем активный класс со всех кнопок режима
-      ['btn-daily', 'btn-parts'].forEach(id => {
-        document.getElementById(id).classList.remove('active');
-      });
-      // Устанавливаем активный класс на выбранную кнопку
-      document.getElementById(mode === 'daily' ? 'btn-daily' : 'btn-parts').classList.add('active');
-      // Автоматически загружаем прогноз при смене режима
-      fetchForecast();
-    }
-
-    async function fetchForecast() {
-      const lat = document.getElementById('lat').value || 55.75;
-      const lon = document.getElementById('lon').value || 37.62;
-      const container = document.getElementById('forecast-container');
-      container.innerHTML = '<p class="text-center text-slate-400">⏳ Загрузка...</p>';
-
-      try {
-        const resp = await fetch(`/api/forecast?lat=${lat}&lon=${lon}&days=10&provider=${currentProvider}&mode=${currentMode}`);
-        if (!resp.ok) throw new Error(`Ошибка HTTP: ${resp.status}`);
-        const data = await resp.json();
-        renderForecast(data, container);
-      } catch (err) {
-        container.innerHTML = `<p class="text-center text-red-400">⚠️ ${err.message}</p>`;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Weather Server — Прогноз</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        color: #e2e8f0;
       }
-    }
+      .card {
+        background: rgba(30, 41, 59, 0.7);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(148, 163, 184, 0.1);
+      }
+      .day-card {
+        transition:
+          transform 0.2s ease,
+          background 0.2s;
+      }
+      .day-card:hover {
+        transform: translateY(-2px);
+        background: rgba(51, 65, 85, 0.5);
+      }
+      input[type="number"]::-webkit-inner-spin-button {
+        display: none;
+      }
+      .control-btn {
+        transition: all 0.2s;
+      }
+      .control-btn.active {
+        background: #2563eb;
+        color: white;
+      }
+      .part-block {
+        background: rgba(51, 65, 85, 0.4);
+        border-radius: 12px;
+      }
 
-    function renderForecast(data, container) {
-      const mode = currentMode;
-      let daysHTML;
+      /* Стили для красивого отображения ошибок */
+      .error-box {
+        background: rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(239, 68, 68, 0.45);
+        border-radius: 16px;
+        padding: 1.25rem;
+        backdrop-filter: blur(12px);
+        animation: fadeIn 0.3s ease;
+      }
+      .error-icon {
+        font-size: 1.7rem;
+        margin-right: 0.5rem;
+        vertical-align: middle;
+      }
+      .error-title {
+        font-weight: 600;
+        font-size: 1.05rem;
+        color: #fca5a5;
+        margin-bottom: 0.8rem;
+      }
+      .error-list {
+        list-style: none;
+        padding-left: 0;
+        margin: 0;
+      }
+      .error-list li {
+        display: flex;
+        align-items: baseline;
+        gap: 0.4rem;
+        font-size: 0.9rem;
+        color: #fecaca;
+        padding: 0.25rem 0;
+      }
+      .error-list li::before {
+        content: "•";
+        color: #ef4444;
+        font-weight: bold;
+        font-size: 1.2rem;
+        line-height: 1;
+        margin-right: 0.1rem;
+      }
+      .error-suggestion {
+        margin-top: 0.8rem;
+        font-size: 0.85rem;
+        color: #fda4af;
+        background: rgba(239, 68, 68, 0.15);
+        padding: 0.5rem 0.75rem;
+        border-radius: 10px;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(5px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+  <body class="min-h-screen flex flex-col items-center justify-center p-4">
+    <div class="w-full max-w-2xl mx-auto">
+      <h1 class="text-3xl font-bold text-center mb-2">🌤 Weather Server</h1>
+      <p class="text-center text-slate-400 mb-8">
+        Прогноз на 10 дней по координатам
+      </p>
 
-      if (mode === 'day_parts') {
-        daysHTML = data.days.map(day => {
-          const morning = day.morning;
-          const evening = day.evening;
-          
-          // Блок утра
-          const morningHTML = morning ? `
+      <div class="card rounded-2xl p-6 mb-8 shadow-xl">
+        <div class="flex flex-col sm:flex-row gap-3">
+          <div class="flex-1">
+            <label class="block text-sm font-medium text-slate-300 mb-1"
+              >Широта (lat)</label
+            >
+            <input
+              id="lat"
+              type="number"
+              step="any"
+              value="55.75"
+              class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-medium text-slate-300 mb-1"
+              >Долгота (lon)</label
+            >
+            <input
+              id="lon"
+              type="number"
+              step="any"
+              value="37.62"
+              class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+        <div class="mt-3 flex items-center gap-2 flex-wrap">
+          <span class="text-sm text-slate-400 mr-2">Провайдер:</span>
+          <button
+            id="btn-open-meteo"
+            onclick="setProvider('open_meteo')"
+            class="control-btn px-3 py-1 rounded-full text-sm font-medium bg-slate-700 hover:bg-slate-600"
+          >
+            Open-Meteo
+          </button>
+          <button
+            id="btn-yandex"
+            onclick="setProvider('yandex')"
+            class="control-btn px-3 py-1 rounded-full text-sm font-medium bg-slate-700 hover:bg-slate-600"
+          >
+            Яндекс
+          </button>
+          <span class="text-sm text-slate-400 ml-3">Режим:</span>
+          <button
+            id="btn-daily"
+            onclick="setMode('daily')"
+            class="control-btn px-3 py-1 rounded-full text-sm font-medium bg-slate-700 hover:bg-slate-600"
+          >
+            Суточные
+          </button>
+          <button
+            id="btn-parts"
+            onclick="setMode('day_parts')"
+            class="control-btn px-3 py-1 rounded-full text-sm font-medium bg-slate-700 hover:bg-slate-600"
+          >
+            8 утра / 6 вечера
+          </button>
+          <button
+            onclick="fetchForecast()"
+            class="ml-auto bg-blue-600 hover:bg-blue-700 transition px-6 py-2 rounded-lg font-medium"
+          >
+            🔍 Показать
+          </button>
+        </div>
+      </div>
+
+      <div id="forecast-container" class="space-y-3">
+        <p class="text-center text-slate-500">
+          Введите координаты и нажмите «Показать»
+        </p>
+      </div>
+    </div>
+
+    <script>
+      let currentProvider = "open_meteo";
+      let currentMode = "daily";
+
+      document.addEventListener("DOMContentLoaded", function () {
+        setProvider("open_meteo");
+        setMode("daily");
+      });
+
+      function setProvider(provider) {
+        currentProvider = provider;
+        ["btn-open-meteo", "btn-yandex"].forEach((id) => {
+          document.getElementById(id).classList.remove("active");
+        });
+        document
+          .getElementById(
+            provider === "open_meteo" ? "btn-open-meteo" : "btn-yandex",
+          )
+          .classList.add("active");
+        fetchForecast();
+      }
+
+      function setMode(mode) {
+        currentMode = mode;
+        ["btn-daily", "btn-parts"].forEach((id) => {
+          document.getElementById(id).classList.remove("active");
+        });
+        document
+          .getElementById(mode === "daily" ? "btn-daily" : "btn-parts")
+          .classList.add("active");
+        fetchForecast();
+      }
+
+      // Красивый перевод ошибок на русский с иконками
+      function formatErrorResponse(status, errorData) {
+        // Собираем сообщение из detail (может быть строкой или массивом)
+        let detail = errorData?.detail || `Ошибка HTTP: ${status}`;
+
+        // Для 422 (Validation Error) detail — массив объектов с loc, msg, type
+        if (status === 422 && Array.isArray(detail)) {
+          const items = detail.map((err) => {
+            const rawField = err.loc ? err.loc[err.loc.length - 1] : "";
+            const msg = err.msg || "некорректное значение";
+            const fieldNames = {
+              lat: "Широта",
+              lon: "Долгота",
+              days: "Количество дней",
+              provider: "Провайдер",
+              mode: "Режим",
+            };
+            const field = fieldNames[rawField] || rawField;
+
+            // Переводим типичные английские сообщения
+            let translated = msg;
+            if (msg.includes("Input should be")) {
+              translated = msg
+                .replace("Input should be", "")
+                .replace("greater than or equal to", "не менее")
+                .replace("less than or equal to", "не более")
+                .replace("a valid number", "числом")
+                .replace("a valid string", "строкой")
+                .replace("a valid integer", "целым числом")
+                .trim();
+              // Делаем первую букву заглавной
+              translated =
+                translated.charAt(0).toUpperCase() + translated.slice(1);
+            } else if (msg.includes("Value should be")) {
+              translated = msg
+                .replace("Value should be", "")
+                .replace("greater than or equal to", "не менее")
+                .replace("less than or equal to", "не более")
+                .trim();
+              translated =
+                translated.charAt(0).toUpperCase() + translated.slice(1);
+            } else if (msg.includes("one of")) {
+              translated = "Допустимы только указанные значения";
+            } else if (msg.includes("type")) {
+              translated = "Неверный тип данных";
+            }
+
+            return {
+              field,
+              message: translated,
+            };
+          });
+
+          // Если ошибок нет (пустой массив) – заглушка
+          if (items.length === 0) {
+            return {
+              icon: "⚠️",
+              title: "Ошибка валидации",
+              items: [{ field: "Данные", message: "Неизвестная ошибка" }],
+              suggestion: null,
+            };
+          }
+
+          return {
+            icon: "🔴",
+            title: "Проверьте введённые значения",
+            items: items,
+            suggestion:
+              "Убедитесь, что координаты находятся в допустимых границах: широта от -90 до 90, долгота от -180 до 180. Дней: 1-16.",
+          };
+        }
+
+        // Для других ошибок (500, 502, 503 и пр.)
+        let icon = "❌";
+        let title = "Произошла ошибка";
+        let suggestion = null;
+
+        if (status >= 500) {
+          icon = "💥";
+          title = "Ошибка сервера";
+          suggestion =
+            "Попробуйте повторить запрос позже или проверьте выбранного провайдера.";
+        } else if (status === 404) {
+          icon = "🔍";
+          title = "Ресурс не найден";
+          suggestion = "Возможно, изменился адрес API. Проверьте документацию.";
+        } else if (status === 403) {
+          icon = "🚫";
+          title = "Доступ запрещён";
+          suggestion = "API-ключ отсутствует или недействителен.";
+        } else if (status === 429) {
+          icon = "⏳";
+          title = "Слишком много запросов";
+          suggestion = "Превышен лимит. Подождите немного.";
+        }
+
+        // Простая строка ошибки
+        return {
+          icon,
+          title,
+          items: [
+            {
+              field: "",
+              message:
+                typeof detail === "string" ? detail : JSON.stringify(detail),
+            },
+          ],
+          suggestion,
+        };
+      }
+
+      async function fetchForecast() {
+        const lat = document.getElementById("lat").value || 55.75;
+        const lon = document.getElementById("lon").value || 37.62;
+        const container = document.getElementById("forecast-container");
+        container.innerHTML =
+          '<p class="text-center text-slate-400">⏳ Загрузка...</p>';
+
+        try {
+          const resp = await fetch(
+            `/api/forecast?lat=${lat}&lon=${lon}&days=10&provider=${currentProvider}&mode=${currentMode}`,
+          );
+          if (!resp.ok) {
+            let errorData = null;
+            try {
+              errorData = await resp.json();
+            } catch (jsonErr) {
+              // ответ не JSON — оставляем errorData = null
+            }
+            const formatted = formatErrorResponse(resp.status, errorData);
+            throw { formatted };
+          }
+          const data = await resp.json();
+          renderForecast(data, container);
+        } catch (err) {
+          if (err.formatted) {
+            const f = err.formatted;
+            let itemsHtml = f.items
+              .map((item) => {
+                const prefix = item.field ? item.field + ": " : "";
+                return `<li>${prefix}${item.message}</li>`;
+              })
+              .join("");
+            if (f.suggestion) {
+              itemsHtml += `<div class="error-suggestion">💡 ${f.suggestion}</div>`;
+            }
+            container.innerHTML = `
+            <div class="error-box">
+              <div class="flex items-center mb-2">
+                <span class="error-icon">${f.icon}</span>
+                <span class="error-title">${f.title}</span>
+              </div>
+              <ul class="error-list">${itemsHtml}</ul>
+            </div>
+          `;
+          } else {
+            container.innerHTML = `
+            <div class="error-box">
+              <div class="flex items-center mb-2">
+                <span class="error-icon">⚠️</span>
+                <span class="error-title">Неизвестная ошибка</span>
+              </div>
+              <p class="text-red-200 text-sm">${err.message || err}</p>
+            </div>
+          `;
+          }
+        }
+      }
+
+      function renderForecast(data, container) {
+        const mode = currentMode;
+        let daysHTML;
+
+        if (mode === "day_parts") {
+          daysHTML = data.days
+            .map((day) => {
+              const morning = day.morning;
+              const evening = day.evening;
+
+              const morningHTML = morning
+                ? `
             <div class="part-block p-3 flex items-center justify-between">
               <div class="flex items-center gap-3">
                 <span class="text-xl">🌅</span>
@@ -135,14 +413,15 @@
                 <p class="text-lg font-bold">${morning.temp}°</p>
                 <div class="flex gap-2 text-xs text-slate-400">
                   <span>💧${morning.prec} мм</span>
-                  ${morning.wind > 0 ? `<span>💨${morning.wind} м/с</span>` : ''}
+                  ${morning.wind > 0 ? `<span>💨${morning.wind} м/с</span>` : ""}
                 </div>
               </div>
             </div>
-          ` : '<div class="part-block p-3 text-center text-xs text-slate-500">Нет данных</div>';
+          `
+                : '<div class="part-block p-3 text-center text-xs text-slate-500">Нет данных</div>';
 
-          // Блок вечера
-          const eveningHTML = evening ? `
+              const eveningHTML = evening
+                ? `
             <div class="part-block p-3 flex items-center justify-between">
               <div class="flex items-center gap-3">
                 <span class="text-xl">🌆</span>
@@ -155,13 +434,14 @@
                 <p class="text-lg font-bold">${evening.temp}°</p>
                 <div class="flex gap-2 text-xs text-slate-400">
                   <span>💧${evening.prec} мм</span>
-                  ${evening.wind > 0 ? `<span>💨${evening.wind} м/с</span>` : ''}
+                  ${evening.wind > 0 ? `<span>💨${evening.wind} м/с</span>` : ""}
                 </div>
               </div>
             </div>
-          ` : '<div class="part-block p-3 text-center text-xs text-slate-500">Нет данных</div>';
+          `
+                : '<div class="part-block p-3 text-center text-xs text-slate-500">Нет данных</div>';
 
-          return `
+              return `
             <div class="day-card card rounded-xl p-4 flex flex-col gap-3 shadow-md">
               <p class="font-semibold">${formatDate(day.date)}</p>
               <div class="grid grid-cols-2 gap-3">
@@ -170,64 +450,71 @@
               </div>
             </div>
           `;
-        }).join('');
-      } else {
-        // Режим daily — оставляем как есть, тот же классный дизайн
-        daysHTML = data.days.map(day => {
-          const weatherIcon = getWeatherIcon(day.weather);
-          return `
+            })
+            .join("");
+        } else {
+          daysHTML = data.days
+            .map((day) => {
+              const weatherIcon = getWeatherIcon(day.weather);
+              return `
             <div class="day-card card rounded-xl p-4 flex items-center justify-between shadow-md">
-              <div class="flex items-center gap-4">
-                <span class="text-2xl">${weatherIcon}</span>
-                <div>
-                  <p class="font-semibold">${formatDate(day.date)}</p>
-                  <p class="text-sm text-slate-400">${day.weather}</p>
-                </div>
-              </div>
-              <div class="text-right">
-                <p class="text-lg font-bold">${day.temp_max}°<span class="text-slate-400"> / ${day.temp_min}°</span></p>
-                <div class="flex gap-3 text-xs text-slate-400 mt-1">
-                  <span>💨 ${day.wind} м/с</span>
-                  <span>💧 ${day.prec} мм</span>
-                </div>
-              </div>
-            </div>
+  <div class="flex items-center gap-4 min-w-0">  <!-- ← добавили min-w-0 -->
+    <span class="text-2xl flex-shrink-0">${weatherIcon}</span>  <!-- ← иконка не сжимается -->
+    <div class="min-w-0">  <!-- ← обёртка для текста -->
+      <p class="font-semibold truncate">${formatDate(day.date)}</p>  <!-- ← truncate, если не влезает -->
+      <p class="text-sm text-slate-400 truncate">${day.weather}</p>  <!-- ← truncate -->
+    </div>
+  </div>
+  <div class="text-right flex-shrink-0">  <!-- ← правая часть не сжимается -->
+    <p class="text-lg font-bold">${day.temp_max}°<span class="text-slate-400"> / ${day.temp_min}°</span></p>
+    <div class="flex gap-3 text-xs text-slate-400 mt-1">
+      <span>💨 ${day.wind} м/с</span>
+      <span>💧 ${day.prec} мм</span>
+    </div>
+  </div>
+</div>
           `;
-        }).join('');
-      }
+            })
+            .join("");
+        }
 
-      container.innerHTML = `
+        container.innerHTML = `
         <div class="flex justify-between items-center mb-4 px-1">
           <div>
             <h2 class="text-lg font-semibold">${data.latitude.toFixed(2)}°, ${data.longitude.toFixed(2)}°</h2>
-            <p class="text-xs text-slate-500">Провайдер: ${currentProvider === 'yandex' ? 'Яндекс' : 'Open-Meteo'} | Режим: ${mode === 'day_parts' ? '8 утра и 6 вечера' : 'суточные'}</p>
+            <p class="text-xs text-slate-500">Провайдер: ${currentProvider === "yandex" ? "Яндекс" : "Open-Meteo"} | Режим: ${mode === "day_parts" ? "8 утра и 6 вечера" : "суточные"}</p>
           </div>
           <span class="text-sm text-slate-400">${data.days.length} дней</span>
         </div>
         ${daysHTML}
       `;
-    }
+      }
 
-    function getWeatherIcon(weather) {
-      const lower = weather.toLowerCase();
-      if (lower.includes('ясно')) return '☀️';
-      if (lower.includes('малооблачно') || lower.includes('переменная')) return '⛅';
-      if (lower.includes('облачно') || lower.includes('пасмурно')) return '☁️';
-      if (lower.includes('дождь') || lower.includes('морось')) return '🌧️';
-      if (lower.includes('снег')) return '❄️';
-      if (lower.includes('гроз')) return '⛈️';
-      if (lower.includes('туман')) return '🌫️';
-      return '🌡️';
-    }
+      function getWeatherIcon(weather) {
+        const lower = weather.toLowerCase();
+        if (lower.includes("ясно")) return "☀️";
+        if (lower.includes("малооблачно") || lower.includes("переменная"))
+          return "⛅";
+        if (lower.includes("облачно") || lower.includes("пасмурно"))
+          return "☁️";
+        if (lower.includes("дождь") || lower.includes("морось")) return "🌧️";
+        if (lower.includes("снег")) return "❄️";
+        if (lower.includes("гроз")) return "⛈️";
+        if (lower.includes("туман")) return "🌫️";
+        return "🌡️";
+      }
 
-    function formatDate(dateStr) {
-      const [year, month, day] = dateStr.split('-');
-      const date = new Date(year, month - 1, day);
-      return date.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long' });
-    }
+      function formatDate(dateStr) {
+        const [year, month, day] = dateStr.split("-");
+        const date = new Date(year, month - 1, day);
+        return date.toLocaleDateString("ru-RU", {
+          weekday: "short",
+          day: "numeric",
+          month: "long",
+        });
+      }
 
-    // Автозагрузка прогноза при открытии страницы
-    fetchForecast();
-  </script>
-</body>
+      fetchForecast();
+    </script>
+  </body>
 </html>

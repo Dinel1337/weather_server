@@ -1,8 +1,6 @@
 .PHONY: test lint tox cov view-full view-clean commit
-
 run:
 	uv run uvicorn src.main:app --reload
-
 test:
 	uv run pytest tests/ -v
 
@@ -21,14 +19,14 @@ copy:
 ci: lint test
 	echo "✅ CI пройден"
 
+view-full:
+	cat src/static/index.html
+
+view-clean:
+	grep -v '^[[:space:]]*$' src/static/index.html | grep -v '^[[:space:]]*//'
+
 commit:
 	@read -p "Введите сообщение коммита: " msg; \
 	git add -A; \
 	git commit -m "$$msg | added via Makefile"; \
 	git push
-
-view-full:
-	bash bin/!toggle_bash_view.bash y
-
-view-clean:
-	bash bin/!toggle_bash_view.bash n
