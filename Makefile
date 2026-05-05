@@ -11,7 +11,7 @@ tox:
 	uv run tox
 
 cov:
-	uv run pytest tests/ --cov=src --cov-report=html --cov-report=term-missing
+	uv run pytest tests/ --cov=src --cov-report=term-missing
 
 copy:
 	bash bin/\!copyTreeProject.bash
