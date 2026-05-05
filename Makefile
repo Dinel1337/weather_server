@@ -1,5 +1,6 @@
 .PHONY: test lint tox cov view-full view-clean commit
-
+run:
+	uv run uvicorn src.main:app --reload
 test:
 	uv run pytest tests/ -v
 
